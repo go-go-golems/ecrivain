@@ -10,8 +10,8 @@ import (
 
 type File interface {
 	Reset()
-	Beginning() string
-	Ending() string
+	Beginning()
+	Ending()
 	AddHeading(level int, heading, fileName string, line int)
 	AddCode(code, fileName string, startLine, endLine int)
 	AddComment(comment, fileName string, startLine, endLine int)
@@ -54,6 +54,10 @@ func (p *Book) FormatBuffer() {
 		lines := strings.Split(content, "\n")
 		lineCounter := 0
 
+		linesProcessed := p.doBeginning(file, lineCounter)
+		lineCounter += linesProcessed
+		lines = lines[linesProcessed:]
+
 		for len(lines) > 0 {
 			line := lines[0]
 
@@ -78,6 +82,8 @@ func (p *Book) FormatBuffer() {
 				lines = lines[linesProcessed:]
 			}
 		}
+
+		p.doEnding(file, lineCounter)
 	}
 }
 
@@ -129,4 +135,13 @@ func (p *Book) doCode(lines []string, fileName string, lineCounter int) int {
 
 	p.OutFile.AddCode(code, fileName, lineCounter, lineCounter+codeLines)
 	return codeLines
+}
+
+func (p *Book) doBeginning(file string, counter int) int {
+	p.OutFile.Beginning()
+	return 0
+}
+
+func (p *Book) doEnding(file string, counter int) {
+	p.OutFile.Ending()
 }

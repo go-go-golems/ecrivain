@@ -44,12 +44,10 @@ func (t *TxtFile) AddCode(code, fileName string, startLine, endLine int) {
 	t.Buffer.WriteString("=========================================================\n\n")
 }
 
-func (t *TxtFile) Beginning() string {
-	return ""
+func (t *TxtFile) Beginning() {
 }
 
-func (t *TxtFile) Ending() string {
-	return ""
+func (t *TxtFile) Ending() {
 }
 
 func (t *TxtFile) Write(w io.Writer) (int, error) {

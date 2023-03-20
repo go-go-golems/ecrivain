@@ -48,7 +48,6 @@ func NewEcrivainLayer() (layers.ParameterLayer, error) {
 				parameters.WithShortFlag("t"),
 				parameters.WithHelp("Output type"),
 				parameters.WithChoices([]string{"tex", "txt"}),
-				parameters.WithDefault("txt"),
 			),
 			parameters.NewParameterDefinition(
 				"title",
@@ -108,7 +107,9 @@ func (r *RenderCommand) RunIntoWriter(
 	}
 
 	if settings.OutputType == "" {
-		_, ext := filepath.Split(settings.OutputFile)
+		// get settings OutputFile's extension
+		ext := filepath.Ext(settings.OutputFile)
+
 		switch ext {
 		case ".tex":
 			settings.OutputType = "tex"

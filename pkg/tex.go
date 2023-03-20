@@ -55,16 +55,16 @@ func NewTexFile(title string, author string, style string, includeToc bool) *Tex
 	}
 }
 
-func (tf *TexFile) Beginning() string {
+func (t *TexFile) Beginning() {
 	authorString := ""
-	if tf.Author != "" {
-		authorString = fmt.Sprintf("\\author{%s}\n", tf.Author)
+	if t.Author != "" {
+		authorString = fmt.Sprintf("\\author{%s}\n", t.Author)
 	}
 	tocString := ""
-	if tf.IncludeToc {
+	if t.IncludeToc {
 		tocString = "\\tableofcontents\n"
 	}
-	return fmt.Sprintf(`
+	t.Buffer.WriteString(fmt.Sprintf(`
 \documentclass[notitlepage,a4paper]{%s}
 \usepackage{fancyvrb,color,palatino}
 \definecolor{gray}{gray}{0.6}
@@ -72,11 +72,11 @@ func (tf *TexFile) Beginning() string {
 %s
 \begin{document}
 \maketitle
-%s`, tf.Style, escapeString(tf.Title), authorString, tocString)
+%s`, t.Style, escapeString(t.Title), authorString, tocString))
 }
 
-func (tf *TexFile) Ending() string {
-	return "\\end{document}\n"
+func (t *TexFile) Ending() {
+	t.Buffer.WriteString("\\end{document}\n")
 }
 
 func min(level int, i int) int {
