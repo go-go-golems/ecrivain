@@ -1,0 +1,22 @@
+# regexps.yaml
+
+lisp:
+  commentRe: "^;;;($|[^#])"
+  headingRe: "^;;;(#+)"
+
+c:
+  commentRe: "^(\s|/)*\*\*($|[^#/])"
+  headingRe: "^\s*/\*\*(#+)"
+  removeRe: '\s*/?\*\*+/'
+
+rust:
+  commentRe: "^//[/!]"
+  headingRe: "^//[/!](#+)"
+
+erlang:
+  commentRe: "^%{3}($|[^#])"
+  headingRe: "^%{3}(#+)"
+
+elixir:
+  commentRe: "^#{3}($|[^#])"
+  headingRe: "^#{3}(#+)"
