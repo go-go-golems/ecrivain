@@ -1,4 +1,4 @@
-package main
+package pkg
 
 import (
 	"fmt"
@@ -12,7 +12,6 @@ type TexFile struct {
 	IncludeToc                bool
 	BookSectioningCommands    []string
 	ArticleSectioningCommands []string
-	Buffer                    string
 }
 
 func escapeRepl(_ string, match string) string {
@@ -53,7 +52,6 @@ func NewTexFile(title string, author string, style string, includeToc bool) *Tex
 		IncludeToc:                includeToc,
 		BookSectioningCommands:    []string{"chapter", "section", "subsection", "subsubsection"},
 		ArticleSectioningCommands: []string{"section", "subsection", "subsubsection"},
-		Buffer:                    "",
 	}
 }
 
@@ -95,4 +93,30 @@ func (tf *TexFile) SectioningCommand(level int) string {
 		return tf.BookSectioningCommands[min(level, len(tf.BookSectioningCommands))]
 	}
 	return ""
+}
+
+func (t *TexFile) AddHeading(level int, heading, fileName string, line int) {
+	whitespace := regexp.MustCompile(`\s+`)
+	heading = whitespace.ReplaceAllString(heading, " ")
+	sectionCmd := t.SectioningCommand(level)
+	escapedHeading := escapeString(heading)
+	t.Buffer.WriteString(fmt.Sprintf("\\%s{%s}\n", sectionCmd, escapedHeading))
+}
+
+func (t *TexFile) AddComment(comment, fileName string, startLine, endLine int) {
+	escapedComment := escapeString(comment)
+	codeComment := regexp.MustCompile("`([^`']*)'")
+	comment = codeComment.ReplaceAllString(escapedComment, "{\\\\tt \\1}")
+	quoteComment := regexp.MustCompile("\"([^\"]*)\"")
+	t.Buffer.WriteString(quoteComment.ReplaceAllString(comment, "``\\1''"))
+}
+
+func (t *TexFile) AddCode(code, fileName string, startLine, endLine int) {
+	code = strings.TrimRight(code, "\n")
+	code = strings.ReplaceAll(code, "\\end{Verbatim}", "\\\\_end{Verbatim}")
+	code = strings.ReplaceAll(code, "\t", "   ")
+	t.Buffer.WriteString("\n\\begin{Verbatim}[fontsize=\\small,frame=leftline,framerule=0.9mm," +
+		"rulecolor=\\color{gray},framesep=5.1mm,xleftmargin=5mm,fontfamily=cmtt]\n")
+	t.Buffer.WriteString(code)
+	t.Buffer.WriteString("\n\\end{Verbatim}\n")
 }

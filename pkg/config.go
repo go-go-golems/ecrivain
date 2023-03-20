@@ -1,4 +1,4 @@
-package main
+package pkg
 
 import (
 	_ "embed"
@@ -8,9 +8,9 @@ import (
 )
 
 type RegExpSet struct {
-	Comment  string   `yaml:"comment"`
-	Heading  string   `yaml:"heading"`
-	Remove   string   `yaml:"remove,omitempty"`
+	Comment  string   `yaml:"commentRe"`
+	Heading  string   `yaml:"headingRe"`
+	Remove   string   `yaml:"removeRe,omitempty"`
 	FileExts []string `yaml:"fileExts,omitempty"`
 }
 
@@ -27,7 +27,7 @@ func LoadLanguages() (*LanguageConfig, error) {
 	}
 
 	// load config from regexpsYaml
-	err := yaml.Unmarshal(regexpsYaml, config)
+	err := yaml.Unmarshal(regexpsYaml, &config.Languages)
 	if err != nil {
 		return nil, err
 	}
@@ -35,15 +35,12 @@ func LoadLanguages() (*LanguageConfig, error) {
 	return config, nil
 }
 
-func (cfg *LanguageConfig) CreateBook(ext string, outFile File) (*Book, error) {
-	for _, regExpSet := range cfg.Languages {
-		for _, fileExt := range regExpSet.FileExts {
-			if strings.EqualFold(ext, fileExt) {
-				return NewBook([]string{}, outFile, regExpSet), nil
-			}
-		}
+func (cfg *LanguageConfig) CreateBook(files []string, language string, outFile File) (*Book, error) {
+	regExpSet, ok := cfg.Languages[language]
+	if !ok {
+		return nil, fmt.Errorf("language not found: %s", language)
 	}
-	return nil, fmt.Errorf("no language found for extension: %s", ext)
+	return NewBook(files, outFile, regExpSet), nil
 }
 
 func (cfg *LanguageConfig) DetectLanguage(file string) (string, error) {

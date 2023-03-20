@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	clay "github.com/go-go-golems/clay/pkg"
+	"github.com/go-go-golems/ecrivain/pkg"
 	"github.com/go-go-golems/glazed/pkg/cli"
 	"github.com/go-go-golems/glazed/pkg/cmds"
 	"github.com/go-go-golems/glazed/pkg/cmds/layers"
@@ -13,15 +14,16 @@ import (
 	"github.com/spf13/cobra"
 	"io"
 	"os"
+	"path/filepath"
 )
 
 type EcrivainSettings struct {
-	OutputFile string `glazed.parameters:"output-file"`
-	OutputType string `glazed.parameters:"output-type"`
-	Title      string `glazed.parameters:"title"`
-	Author     string `glazed.parameters:"author"`
-	Style      string `glazed.parameters:"style"`
-	IncludeToc bool   `glazed.parameters:"include-toc"`
+	OutputFile string `glazed.parameter:"output-file"`
+	OutputType string `glazed.parameter:"output-type"`
+	Title      string `glazed.parameter:"title"`
+	Author     string `glazed.parameter:"author"`
+	Style      string `glazed.parameter:"style"`
+	IncludeToc bool   `glazed.parameter:"include-toc"`
 }
 
 // NOTE(manuel, 2023-03-20) More flags to add:
@@ -99,32 +101,51 @@ func (r *RenderCommand) RunIntoWriter(
 	if !ok {
 		return fmt.Errorf("ecrivain layer not found")
 	}
-	ecrivainSettings := &EcrivainSettings{}
-	err := parameters.InitializeStructFromParameters(ecrivainSettings, ecrivainLayer.Parameters)
+	settings := &EcrivainSettings{}
+	err := parameters.InitializeStructFromParameters(settings, ecrivainLayer.Parameters)
 	if err != nil {
 		return err
 	}
 
-	var outFile File
-
-	switch ecrivainSettings.OutputType {
-	case "tex":
-		outFile = NewTexFile(
-			ecrivainSettings.Title,
-			ecrivainSettings.Author,
-			ecrivainSettings.Style,
-			ecrivainSettings.IncludeToc,
-		)
+	if settings.OutputType == "" {
+		_, ext := filepath.Split(settings.OutputFile)
+		switch ext {
+		case ".tex":
+			settings.OutputType = "tex"
+		case ".txt":
+			settings.OutputType = "txt"
+		default:
+			return fmt.Errorf("unknown output type: %s", ext)
+		}
 	}
 
-	config, err := LoadLanguages()
+	var outFile pkg.File
+
+	switch settings.OutputType {
+	case "tex":
+		outFile = pkg.NewTexFile(
+			settings.Title,
+			settings.Author,
+			settings.Style,
+			settings.IncludeToc,
+		)
+
+	case "txt":
+		outFile = pkg.NewTxtFile(settings.Title, settings.Author)
+
+	default:
+		return fmt.Errorf("ecrivain type: %s", settings.OutputType)
+	}
+
+	config, err := pkg.LoadLanguages()
 	if err != nil {
 		return err
 	}
 
 	language := ""
 
-	for _, file := range ps["source-files"].([]string) {
+	files := ps["source-files"].([]string)
+	for _, file := range files {
 		lang, err := config.DetectLanguage(file)
 		if err != nil {
 			return err
@@ -137,7 +158,7 @@ func (r *RenderCommand) RunIntoWriter(
 		}
 	}
 
-	book, err := config.CreateBook(language, outFile)
+	book, err := config.CreateBook(files, language, outFile)
 	if err != nil {
 		return err
 	}

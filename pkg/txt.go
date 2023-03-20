@@ -1,4 +1,4 @@
-package main
+package pkg
 
 import (
 	"fmt"
@@ -11,6 +11,13 @@ type TxtFile struct {
 	Title  string
 	Author string
 	Buffer strings.Builder
+}
+
+func NewTxtFile(title, author string) *TxtFile {
+	return &TxtFile{
+		Title:  title,
+		Author: author,
+	}
 }
 
 func (t *TxtFile) Reset() {

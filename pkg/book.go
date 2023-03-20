@@ -1,4 +1,4 @@
-package main
+package pkg
 
 import (
 	"fmt"
@@ -57,16 +57,25 @@ func (p *Book) FormatBuffer() {
 		for len(lines) > 0 {
 			line := lines[0]
 
+			// check if line is just whitespace and skip
+			if len(strings.TrimSpace(line)) == 0 {
+				lines = lines[1:]
+				lineCounter++
+				continue
+			}
+
 			if headingRe.MatchString(line) {
 				p.doHeading(line, file, lineCounter)
 				lines = lines[1:]
 				lineCounter++
 			} else if commentRe.MatchString(line) {
-				lineCounter += p.doComment(lines, file, lineCounter)
-				lines = lines[lineCounter:]
+				linesProcessed := p.doComment(lines, file, lineCounter)
+				lineCounter += linesProcessed
+				lines = lines[linesProcessed:]
 			} else {
-				lineCounter += p.doCode(lines, file, lineCounter)
-				lines = lines[lineCounter:]
+				linesProcessed := p.doCode(lines, file, lineCounter)
+				lineCounter += linesProcessed
+				lines = lines[linesProcessed:]
 			}
 		}
 	}
