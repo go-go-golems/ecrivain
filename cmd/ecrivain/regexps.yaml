@@ -5,14 +5,14 @@ lisp:
 
 c:
   fileExts: [".c", ".cpp", ".C", ".h"]
-  commentRe: "^(\s|/)*\*\*($|[^#/])"
-  headingRe: "^\s*/\*\*(#+)"
-  removeRe: '\s*/?\*\*+/'
+  commentRe: "^(\\s|/)*\\*\\*($|[^#/])"
+  headingRe: "^\\s*/\\*\\*(#+)"
+  removeRe: "\\s*/?\\*\\*+/"
 
 rust:
   fileExts: [".rs"]
-  commentRe: "^//[/!]"
-  headingRe: "^//[/!](#+)"
+  commentRe: "^//[\\/]!"
+  headingRe: "^//[\\/]!(#+)"
 
 erlang:
   fileExts: [".erl"]
