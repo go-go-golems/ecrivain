@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"path/filepath"
 	"strings"
 )
@@ -34,4 +35,16 @@ func (t *TxtFile) AddCode(code, fileName string, startLine, endLine int) {
 	code = strings.ReplaceAll(code, "\t", "   ")
 	t.Buffer.WriteString(fmt.Sprintf("\n== %s (%s:%d) ================\n%s\n", filepath.Base(fileName), fileName, startLine, code))
 	t.Buffer.WriteString("=========================================================\n\n")
+}
+
+func (t *TxtFile) Beginning() string {
+	return ""
+}
+
+func (t *TxtFile) Ending() string {
+	return ""
+}
+
+func (t *TxtFile) Write(w io.Writer) (int, error) {
+	return w.Write([]byte(t.Buffer.String()))
 }

@@ -2,7 +2,8 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
+	"os"
 	"regexp"
 	"strings"
 )
@@ -14,28 +15,28 @@ type File interface {
 	AddHeading(level int, heading, fileName string, line int)
 	AddCode(code, fileName string, startLine, endLine int)
 	AddComment(comment, fileName string, startLine, endLine int)
-	EscapeString(aStr string) string
+	Write(w io.Writer) (int, error)
 }
 
-type Pbook struct {
+type Book struct {
 	Files     []string
 	RegExpSet RegExpSet
 	OutFile   File
 }
 
-func NewPbook(files []string, outFile File, regExpSet RegExpSet) *Pbook {
-	return &Pbook{
+func NewBook(files []string, outFile File, regExpSet RegExpSet) *Book {
+	return &Book{
 		Files:     files,
 		RegExpSet: regExpSet,
 		OutFile:   outFile,
 	}
 }
 
-func (p *Pbook) FormatBuffer() {
+func (p *Book) FormatBuffer() {
 	p.OutFile.Reset()
 
 	for _, file := range p.Files {
-		data, err := ioutil.ReadFile(file)
+		data, err := os.ReadFile(file)
 		if err != nil {
 			fmt.Printf("Error reading file: %s\n", file)
 			continue
@@ -71,7 +72,7 @@ func (p *Pbook) FormatBuffer() {
 	}
 }
 
-func (p *Pbook) doHeading(line, fileName string, lineCounter int) {
+func (p *Book) doHeading(line, fileName string, lineCounter int) {
 	headingRe := regexp.MustCompile(p.RegExpSet.Heading)
 	matches := headingRe.FindStringSubmatch(line)
 	level := len(matches[1]) - 1
@@ -79,7 +80,7 @@ func (p *Pbook) doHeading(line, fileName string, lineCounter int) {
 	p.OutFile.AddHeading(level, heading, fileName, lineCounter)
 }
 
-func (p *Pbook) doComment(lines []string, fileName string, lineCounter int) int {
+func (p *Book) doComment(lines []string, fileName string, lineCounter int) int {
 	commentRe := regexp.MustCompile(p.RegExpSet.Comment)
 	comment := ""
 	commentLines := 0
@@ -99,7 +100,7 @@ func (p *Pbook) doComment(lines []string, fileName string, lineCounter int) int 
 	return commentLines
 }
 
-func (p *Pbook) doCode(lines []string, fileName string, lineCounter int) int {
+func (p *Book) doCode(lines []string, fileName string, lineCounter int) int {
 	code := ""
 	codeLines := 0
 

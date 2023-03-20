@@ -1,110 +1,213 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
+	clay "github.com/go-go-golems/clay/pkg"
+	"github.com/go-go-golems/glazed/pkg/cli"
+	"github.com/go-go-golems/glazed/pkg/cmds"
+	"github.com/go-go-golems/glazed/pkg/cmds/layers"
+	"github.com/go-go-golems/glazed/pkg/cmds/parameters"
+	"github.com/go-go-golems/glazed/pkg/help"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
+	"io"
 	"os"
-	"path/filepath"
-	"regexp"
-	"strings"
 )
 
-type RegExpSet struct {
-	Comment  string   `yaml:"comment"`
-	Heading  string   `yaml:"heading"`
-	Remove   string   `yaml:"remove,omitempty"`
-	FileExts []string `yaml:"fileExts,omitempty"`
+type EcrivainSettings struct {
+	OutputFile string `glazed.parameters:"output-file"`
+	OutputType string `glazed.parameters:"output-type"`
+	Title      string `glazed.parameters:"title"`
+	Author     string `glazed.parameters:"author"`
+	Style      string `glazed.parameters:"style"`
+	IncludeToc bool   `glazed.parameters:"include-toc"`
 }
 
-//go:embed regexps.yaml
-var regexpsYaml []byte
+// NOTE(manuel, 2023-03-20) More flags to add:
+// - globs
+// - watcher
 
-type Config struct {
-	Languages map[string]RegExpSet `yaml:"languages"`
+func NewEcrivainLayer() (layers.ParameterLayer, error) {
+	ecrivainLayer, err := layers.NewParameterLayer(
+		"ecrivain",
+		"Ecrivain rendering options",
+		layers.WithFlags(
+			parameters.NewParameterDefinition(
+				"output-file",
+				parameters.ParameterTypeString,
+				parameters.WithShortFlag("o"),
+				parameters.WithHelp("Output file"),
+				parameters.WithRequired(true),
+			),
+			parameters.NewParameterDefinition(
+				"output-type",
+				parameters.ParameterTypeChoice,
+				parameters.WithShortFlag("t"),
+				parameters.WithHelp("Output type"),
+				parameters.WithChoices([]string{"tex", "txt"}),
+				parameters.WithDefault("txt"),
+			),
+			parameters.NewParameterDefinition(
+				"title",
+				parameters.ParameterTypeString,
+				parameters.WithShortFlag("T"),
+				parameters.WithHelp("Title"),
+			),
+			parameters.NewParameterDefinition(
+				"author",
+				parameters.ParameterTypeString,
+				parameters.WithShortFlag("a"),
+				parameters.WithHelp("Author"),
+			),
+			parameters.NewParameterDefinition(
+				"style",
+				parameters.ParameterTypeString,
+				parameters.WithShortFlag("s"),
+				parameters.WithHelp("Style"),
+				parameters.WithDefault("article"),
+			),
+			parameters.NewParameterDefinition(
+				"include-toc",
+				parameters.ParameterTypeBool,
+				parameters.WithShortFlag("i"),
+				parameters.WithHelp("Include table of contents"),
+				parameters.WithDefault(true),
+			),
+		))
+	if err != nil {
+		return nil, err
+	}
+
+	return ecrivainLayer, nil
 }
 
-func (cfg Config) CreateBook(ext string, outFile File) *Pbook {
-	for lang, regExpSet := range cfg.Languages {
-		for _, fileExt := range regExpSet.FileExts {
-			if strings.ToLower(ext) == strings.ToLower(fileExt) {
-				return NewPbook([]string{}, outFile, regExpSet)
-			}
+type RenderCommand struct {
+	description *cmds.CommandDescription
+}
+
+func (r *RenderCommand) Description() *cmds.CommandDescription {
+	return r.description
+}
+
+func (r *RenderCommand) RunIntoWriter(
+	ctx context.Context,
+	parsedLayers map[string]*layers.ParsedParameterLayer,
+	ps map[string]interface{},
+	w io.Writer) error {
+	ecrivainLayer, ok := parsedLayers["ecrivain"]
+	if !ok {
+		return fmt.Errorf("ecrivain layer not found")
+	}
+	ecrivainSettings := &EcrivainSettings{}
+	err := parameters.InitializeStructFromParameters(ecrivainSettings, ecrivainLayer.Parameters)
+	if err != nil {
+		return err
+	}
+
+	var outFile File
+
+	switch ecrivainSettings.OutputType {
+	case "tex":
+		outFile = NewTexFile(
+			ecrivainSettings.Title,
+			ecrivainSettings.Author,
+			ecrivainSettings.Style,
+			ecrivainSettings.IncludeToc,
+		)
+	}
+
+	config, err := LoadLanguages()
+	if err != nil {
+		return err
+	}
+
+	language := ""
+
+	for _, file := range ps["source-files"].([]string) {
+		lang, err := config.DetectLanguage(file)
+		if err != nil {
+			return err
+		}
+
+		if language == "" {
+			language = lang
+		} else if language != lang {
+			return fmt.Errorf("cannot mix languages: %s and %s", language, lang)
 		}
 	}
+
+	book, err := config.CreateBook(language, outFile)
+	if err != nil {
+		return err
+	}
+
+	// NOTE(manuel, 2023-03-20) iterating through files should probably be done here, not FormatBuffer()
+	book.FormatBuffer()
+
+	_, err = outFile.Write(w)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func escapeString(aStr string) string {
-	aStr = strings.Replace(aStr, "\\", "$\\backslash$", -1)
-	escapeRe := regexp.MustCompile("([#%&~$_^{}])")
-	return escapeRe.ReplaceAllStringFunc(aStr, func(match string) string {
-		return "\\" + match
-	})
+func NewRenderCommand() (*RenderCommand, error) {
+	ecrivainLayer, err := NewEcrivainLayer()
+	if err != nil {
+		return nil, err
+	}
+
+	description := cmds.NewCommandDescription("render",
+		cmds.WithShort("Render a set of source files into a single document"),
+		cmds.WithLayers(ecrivainLayer),
+		cmds.WithArguments(
+			parameters.NewParameterDefinition(
+				"source-files",
+				parameters.ParameterTypeStringList,
+				parameters.WithHelp("Source files"),
+				parameters.WithRequired(true),
+			),
+		),
+	)
+
+	return &RenderCommand{
+		description: description,
+	}, nil
 }
 
 func main() {
-	var (
-		texClass   string
-		pbookType  string
-		title      string
-		author     string
-		output     string
-		style      string
-		includeToc bool
-	)
+	var err error
+
+	helpSystem := help.NewHelpSystem()
+	//err := helpSystem.LoadSectionsFromFS(docFS, ".")
+	//cobra.CheckErr(err)
 
 	rootCmd := &cobra.Command{
-		Use:   "pbook [flags] file ...",
-		Short: "A tool to generate pbooks",
+		Use:   "ecrivain [flags]",
+		Short: "A tool to generate beautiful books out of beautiful source code",
 		Args:  cobra.MinimumNArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
-			cfg := Config{}
-			err := yaml.Unmarshal(regexpsYaml, &cfg)
-			if err != nil {
-				fmt.Printf("Error parsing YAML: %v", err)
-				return
-			}
-
-			for _, file := range args {
-				// get file extension
-				name, ext := filepath.Split(file)
-
-				var outFile File
-
-				p := cfg.CreateBook(ext, NewTexFile(output, title, author, style, includeToc))
-				if p == nil {
-					fmt.Printf("Error creating pbook for file: %s\n", file)
-				}
-
-				p.FormatBuffer()
-
-				if p.OutFile.Title != "" {
-					p.OutFile.Buffer.WriteString("\\end{document}\n")
-				}
-
-				if p.OutFile.Author != "" {
-					p.OutFile.Buffer.WriteString(fmt.Sprintf("\\author{%s}\n", p.OutFile.Author))
-				}
-
-				if p.OutFile.Title != "" {
-					p.OutFile.Buffer.WriteString(fmt.Sprintf("\\title{%s}\n", p.OutFile.Title))
-					p.OutFile.Buffer.WriteString("\\maketitle\n")
-				}
-
-			}
-			return nil
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			// Reinitalize the logger after the config has been loaded
+			err := clay.InitLogger()
+			cobra.CheckErr(err)
 		},
 	}
 
-	rootCmd.Flags().StringVarP(&texClass, "class", "c", "TexFile", "Output class (TexFile|IdqTexFile|TxtFile)")
-	rootCmd.Flags().StringVarP(&pbookType, "type", "T", "", "Pbook type (C|Lisp)")
-	rootCmd.Flags().StringVarP(&title, "title", "t", "", "Title")
-	rootCmd.Flags().StringVarP(&author, "author", "a", "", "Author")
-	rootCmd.Flags().BoolVarP(&includeToc, "toc", "O", true, "Include table of contents")
-	rootCmd.Flags().StringVarP(&output, "output", "o", "", "Output file")
-	rootCmd.Flags().StringVarP(&style, "style", "s", "article", "Style")
+	helpSystem.SetupCobraRootCommand(rootCmd)
+
+	err = clay.InitViper("cliopatra", rootCmd)
+	cobra.CheckErr(err)
+	err = clay.InitLogger()
+	cobra.CheckErr(err)
+
+	renderCommand, err := NewRenderCommand()
+	cobra.CheckErr(err)
+	cobraRenderCommand, err := cli.BuildCobraCommandFromWriterCommand(renderCommand)
+	cobra.CheckErr(err)
+
+	rootCmd.AddCommand(cobraRenderCommand)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
