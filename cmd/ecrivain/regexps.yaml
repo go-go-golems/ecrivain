@@ -1,22 +1,25 @@
-# regexps.yaml
-
 lisp:
+  fileExts: [".lisp", ".el", ".l", ".cl"]
   commentRe: "^;;;($|[^#])"
   headingRe: "^;;;(#+)"
 
 c:
+  fileExts: [".c", ".cpp", ".C", ".h"]
   commentRe: "^(\s|/)*\*\*($|[^#/])"
   headingRe: "^\s*/\*\*(#+)"
   removeRe: '\s*/?\*\*+/'
 
 rust:
+  fileExts: [".rs"]
   commentRe: "^//[/!]"
   headingRe: "^//[/!](#+)"
 
 erlang:
+  fileExts: [".erl"]
   commentRe: "^%{3}($|[^#])"
   headingRe: "^%{3}(#+)"
 
 elixir:
+  fileExts: [".ex", ".exs"]
   commentRe: "^#{3}($|[^#])"
   headingRe: "^#{3}(#+)"
