@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/go-go-golems/clay v0.0.10
-	github.com/go-go-golems/glazed v0.2.46
+	github.com/go-go-golems/glazed v0.2.49
 	github.com/spf13/cobra v1.6.1
 	github.com/stretchr/testify v1.8.1
 	gopkg.in/yaml.v3 v3.0.1
