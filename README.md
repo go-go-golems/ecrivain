@@ -3,8 +3,13 @@
 Ecrivain is the golang port of a python literate programming tool I wrote 20 
 years ago. This is all ChatGPT code, so of course it doesn't work.
 
-![image](https://user-images.githubusercontent.com/128441/226229824-ecfbc9e4-9f84-4b97-b479-2f00ba55ca31.png)
+Here is an example of the documentation it should be able to generate: 
 
+- [bknr datastore manual](https://bknr.common-lisp.dev/pdf/datastore-manual.pdf)
+- [klammerscript manual](https://bknr.common-lisp.dev/pdf/js-manual.pdf)
+- [js reference](https://bknr.common-lisp.dev/pdf/js-reference.pdf)
+
+![image](https://user-images.githubusercontent.com/128441/226229824-ecfbc9e4-9f84-4b97-b479-2f00ba55ca31.png)
 
 ```
  _______  _______  ______    ___   __   __  _______  ___   __    _ 
