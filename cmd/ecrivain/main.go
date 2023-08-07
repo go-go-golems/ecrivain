@@ -84,11 +84,7 @@ func NewEcrivainLayer() (layers.ParameterLayer, error) {
 }
 
 type RenderCommand struct {
-	description *cmds.CommandDescription
-}
-
-func (r *RenderCommand) Description() *cmds.CommandDescription {
-	return r.description
+	*cmds.CommandDescription
 }
 
 func (r *RenderCommand) RunIntoWriter(
@@ -195,7 +191,7 @@ func NewRenderCommand() (*RenderCommand, error) {
 	)
 
 	return &RenderCommand{
-		description: description,
+		CommandDescription: description,
 	}, nil
 }
 
