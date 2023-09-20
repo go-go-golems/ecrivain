@@ -30,7 +30,7 @@ brews:
   - name: ecrivain
     description: "ecrivain is a tool"
     homepage: "https://github.com/go-go-golems/ecrivain"
-    tap:
+    repository:
       owner: go-go-golems
       name: homebrew-go-go-go
       token: "{{ .Env.TAP_GITHUB_TOKEN }}"
