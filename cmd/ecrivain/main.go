@@ -34,7 +34,7 @@ func NewEcrivainLayer() (layers.ParameterLayer, error) {
 	ecrivainLayer, err := layers.NewParameterLayer(
 		"ecrivain",
 		"Ecrivain rendering options",
-		layers.WithFlags(
+		layers.WithParameterDefinitions(
 			parameters.NewParameterDefinition(
 				"output-file",
 				parameters.ParameterTypeString,
@@ -87,17 +87,28 @@ type RenderCommand struct {
 	*cmds.CommandDescription
 }
 
+type RenderCommandSettings struct {
+	SourceFiles []string `glazed.parameter:"source-files"`
+}
+
+var _ cmds.WriterCommand = (*RenderCommand)(nil)
+
 func (r *RenderCommand) RunIntoWriter(
 	ctx context.Context,
-	parsedLayers map[string]*layers.ParsedParameterLayer,
-	ps map[string]interface{},
+	parsedLayers *layers.ParsedLayers,
 	w io.Writer) error {
-	ecrivainLayer, ok := parsedLayers["ecrivain"]
+	ecrivainLayer, ok := parsedLayers.Get("ecrivain")
 	if !ok {
 		return fmt.Errorf("ecrivain layer not found")
 	}
 	settings := &EcrivainSettings{}
-	err := parameters.InitializeStructFromParameters(settings, ecrivainLayer.Parameters)
+	err := ecrivainLayer.InitializeStruct(settings)
+	if err != nil {
+		return err
+	}
+
+	s := &RenderCommandSettings{}
+	err = parsedLayers.GetDefaultParameterLayer().InitializeStruct(s)
 	if err != nil {
 		return err
 	}
@@ -141,8 +152,7 @@ func (r *RenderCommand) RunIntoWriter(
 
 	language := ""
 
-	files := ps["source-files"].([]string)
-	for _, file := range files {
+	for _, file := range s.SourceFiles {
 		lang, err := config.DetectLanguage(file)
 		if err != nil {
 			return err
@@ -155,7 +165,7 @@ func (r *RenderCommand) RunIntoWriter(
 		}
 	}
 
-	book, err := config.CreateBook(files, language, outFile)
+	book, err := config.CreateBook(s.SourceFiles, language, outFile)
 	if err != nil {
 		return err
 	}
@@ -179,7 +189,7 @@ func NewRenderCommand() (*RenderCommand, error) {
 
 	description := cmds.NewCommandDescription("render",
 		cmds.WithShort("Render a set of source files into a single document"),
-		cmds.WithLayers(ecrivainLayer),
+		cmds.WithLayersList(ecrivainLayer),
 		cmds.WithArguments(
 			parameters.NewParameterDefinition(
 				"source-files",
