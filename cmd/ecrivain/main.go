@@ -47,7 +47,7 @@ func NewEcrivainLayer() (layers.ParameterLayer, error) {
 				parameters.ParameterTypeChoice,
 				parameters.WithShortFlag("t"),
 				parameters.WithHelp("Output type"),
-				parameters.WithChoices([]string{"tex", "txt"}),
+				parameters.WithChoices("tex", "txt"),
 			),
 			parameters.NewParameterDefinition(
 				"title",
