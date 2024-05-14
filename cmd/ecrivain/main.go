@@ -99,7 +99,7 @@ func (r *RenderCommand) RunIntoWriter(
 	w io.Writer) error {
 	ecrivainLayer, ok := parsedLayers.Get("ecrivain")
 	if !ok {
-		return fmt.Errorf("ecrivain layer not found")
+		return errors.Errorf("ecrivain layer not found")
 	}
 	settings := &EcrivainSettings{}
 	err := ecrivainLayer.InitializeStruct(settings)
@@ -123,7 +123,7 @@ func (r *RenderCommand) RunIntoWriter(
 		case ".txt":
 			settings.OutputType = "txt"
 		default:
-			return fmt.Errorf("unknown output type: %s", ext)
+			return errors.Errorf("unknown output type: %s", ext)
 		}
 	}
 
@@ -142,7 +142,7 @@ func (r *RenderCommand) RunIntoWriter(
 		outFile = pkg.NewTxtFile(settings.Title, settings.Author)
 
 	default:
-		return fmt.Errorf("ecrivain type: %s", settings.OutputType)
+		return errors.Errorf("ecrivain type: %s", settings.OutputType)
 	}
 
 	config, err := pkg.LoadLanguages()
@@ -161,7 +161,7 @@ func (r *RenderCommand) RunIntoWriter(
 		if language == "" {
 			language = lang
 		} else if language != lang {
-			return fmt.Errorf("cannot mix languages: %s and %s", language, lang)
+			return errors.Errorf("cannot mix languages: %s and %s", language, lang)
 		}
 	}
 

@@ -2,7 +2,6 @@ package pkg
 
 import (
 	_ "embed"
-	"fmt"
 	"gopkg.in/yaml.v3"
 	"strings"
 )
@@ -38,7 +37,7 @@ func LoadLanguages() (*LanguageConfig, error) {
 func (cfg *LanguageConfig) CreateBook(files []string, language string, outFile File) (*Book, error) {
 	regExpSet, ok := cfg.Languages[language]
 	if !ok {
-		return nil, fmt.Errorf("language not found: %s", language)
+		return nil, errors.Errorf("language not found: %s", language)
 	}
 	return NewBook(files, outFile, regExpSet), nil
 }
@@ -51,5 +50,5 @@ func (cfg *LanguageConfig) DetectLanguage(file string) (string, error) {
 			}
 		}
 	}
-	return "", fmt.Errorf("no language found for file: %s", file)
+	return "", errors.Errorf("no language found for file: %s", file)
 }
